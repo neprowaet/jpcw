@@ -20,7 +20,7 @@ public class Challenge extends Packet implements Handler<ConnectionInfo>, Server
     public byte algo;
 
     @Array
-    public byte[] editon;
+    public byte[] edition;
 
     @Skip(1)
     public long exp_rate;
@@ -36,7 +36,7 @@ public class Challenge extends Packet implements Handler<ConnectionInfo>, Server
                 "nonce=" + Arrays.toString(nonce) +
                 ", version=" + Arrays.toString(version) +
                 ", algo=" + algo +
-                ", editon=" + Arrays.toString(editon) +
+                ", editon=" + Arrays.toString(edition) +
                 ", exp_rate=" + exp_rate +
                 '}';
     }

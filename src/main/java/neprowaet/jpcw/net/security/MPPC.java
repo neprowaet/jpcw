@@ -84,7 +84,6 @@ public class MPPC extends Security{
                 }
                 else if (code1 == 2) {
                     if (hasBits(7)) {
-                        
                         byte outB = (byte)((getPackedBits(7) | 0x80) & 0xff);
                         unpackedChunk.add(outB);
                         unpackedBytes.add(outB & 0xff);

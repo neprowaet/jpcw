@@ -36,6 +36,8 @@ public class Client {
 
     private Client() {}
 
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void read(SocketChannel socket) throws Exception {
 
         ByteBuffer bb = ByteBuffer.allocate(1024);

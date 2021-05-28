@@ -1,7 +1,9 @@
 package neprowaet.jpcw.data.gametypes;
 
 import neprowaet.jpcw.io.BinaryPacketStream;
+import neprowaet.jpcw.io.Packet;
 
 public interface SerializableType {
-    public void deserialize(BinaryPacketStream stream);
+    void deserialize(BinaryPacketStream stream);
+
 }

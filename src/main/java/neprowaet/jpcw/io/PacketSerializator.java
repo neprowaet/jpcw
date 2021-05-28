@@ -8,17 +8,15 @@ import neprowaet.jpcw.data.ConnectionInfo;
 import neprowaet.jpcw.data.Data;
 import neprowaet.jpcw.io.annotations.Array;
 import neprowaet.jpcw.io.annotations.Skip;
-import neprowaet.jpcw.io.annotations.UnsignedInt;
 import neprowaet.jpcw.net.packet.server.Challenge;
 import neprowaet.jpcw.net.packet.server.OnlineAnnounce;
-import org.checkerframework.checker.units.qual.A;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Type;
-import java.util.Arrays;
 
 public class PacketSerializator {
+
+    private PacketSerializator() {
+    }
 
     public static <T> T deserialize(BinaryPacketStream buf, Class<T> type) throws Exception {
         return deserialize(buf, type, false);
@@ -35,7 +33,7 @@ public class PacketSerializator {
         return t;
     }
 
-    static <T> void readField(BinaryPacketStream buf, Field field, boolean swap, T ret) throws Exception {
+    private static <T> void readField(BinaryPacketStream buf, Field field, boolean swap, T ret) throws Exception {
 
         Class<?> fieldType = field.getType();
         field.setAccessible(true);
@@ -53,6 +51,7 @@ public class PacketSerializator {
             long length;
             if (arrayAnno.value().equals("")) {
                 length = buf.readCUint();
+
             } else {
                 try {
                     length = Integer.parseInt(arrayAnno.value());
@@ -68,7 +67,7 @@ public class PacketSerializator {
             } else {
                 /*
                 ARRAY GAMETYPES PROCESSING
-                */
+                 */
                 return;
             }
 
@@ -83,8 +82,74 @@ public class PacketSerializator {
     }
 
 
+    public static <T extends Packet> BinaryPacketStream serialize(T packet, boolean swap) {
+        Field[] fields = packet.getClass().getFields();
+        BinaryPacketStream buf = new BinaryPacketStream();
+        if (swap)
+            buf.setBigEndian();
+        if (!swap)
+            buf.setLittleEndian();
 
-    void writeField() {
+        try {
+            for (Field f : fields) {
+                //System.out.println("im here");
+                //System.out.println("buf.count= " + buf.count + " buf.pointer= " + buf.pointer);
+
+                writeField(f, buf, packet);
+                //System.out.println(bytesToHex(buf.toByteArray()));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+        return buf;
+    }
+
+    private static void writeField(Field field, BinaryPacketStream buf, Packet packet) throws IllegalAccessException {
+
+        Class<?> fieldType = field.getType();
+
+        if (field.isAnnotationPresent(Skip.class))
+            for (int i = 0; i < field.getAnnotation(Skip.class).value() ; i++)
+                buf.writeByte((byte)0);
+
+
+
+        if (field.isAnnotationPresent(Array.class)) {
+            Array annotation = field.getAnnotation(Array.class);
+
+
+            try {
+                Integer.parseInt(annotation.value());
+            } catch (NumberFormatException e) {
+                int length = java.lang.reflect.Array.getLength(field.get(packet));
+                buf.writeCUInt(length);
+            }
+
+            //System.out.println(length);
+
+            if (fieldType.getComponentType().getName().equals("byte")) {
+                //System.out.println(bytesToHex((byte[]) field.get(packet)));
+                byte[] ar = (byte[]) field.get(packet);
+                buf.writeBytes(ar);
+                return;
+            } else {
+                /*
+                ARRAY GAMETYPES PROCESSING
+                 */
+            }
+        }
+
+
+        switch (fieldType.getName()) {
+            case "short" -> buf.writeUShort((int) field.get(packet));
+            case "int" -> buf.writeUInt((int) field.get(packet));
+            case "long" -> buf.writeUInt((long) field.get(packet));
+            case "byte" -> buf.writeByte((byte) field.get(packet));
+            default -> System.out.println("WAI");
+        }
+
     }
 
 

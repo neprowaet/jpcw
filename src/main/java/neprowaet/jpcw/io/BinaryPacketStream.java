@@ -1,19 +1,14 @@
 package neprowaet.jpcw.io;
 
-import jdk.jfr.Unsigned;
-
-import java.nio.Buffer;
 import java.nio.BufferUnderflowException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.Collections;
 
 public class BinaryPacketStream {
 
-    private byte[] buf = new byte[16];
+    public byte[] buf = new byte[16];
 
-    private int pointer = 0;
+    public int pointer = 0;
+    public int count = 0;
 
     private boolean swap = false;
 
@@ -22,10 +17,98 @@ public class BinaryPacketStream {
 
     public BinaryPacketStream(byte[] ar) {
         this.buf = ar;
+        this.count = ar.length;
     }
 
     public BinaryPacketStream(byte[] ar, int len) {
         this.buf = Arrays.copyOf(ar, len);
+    }
+
+    public byte[] toByteArray() {
+        byte[] ret = new byte[count];
+        System.arraycopy(this.buf, 0, ret, 0, count);
+
+        return ret;
+    }
+
+    public void setBigEndian() {
+        this.swap = false;
+    }
+
+    public void setLittleEndian() {
+        this.swap = true;
+    }
+
+    public BinaryPacketStream writeUInt(long l) {
+        writeUInt(l, this.swap);
+        return this;
+    }
+
+    public BinaryPacketStream writeCUInt(long l) {
+        if (l < 0x80)
+            return writeByte((byte) l);
+
+        if (l < 0x4000)
+            return writeUShort((int) (l | 0x8000), true);
+
+        if (l < 0x20000000)
+            return writeUInt(l | 0xC0000000, true);
+
+        writeByte((byte) 0xE0);
+
+        return writeUInt(l, true);
+    }
+
+    public BinaryPacketStream writeUShort(int i) {
+        return writeUShort(i, this.swap);
+    }
+    public BinaryPacketStream writeUShort(int i, boolean swap) {
+        i = i & 0xFFFF;
+
+        byte[] shortByteAr = new byte[]{
+                (byte) (i >>> 8),
+                (byte) (i)
+        };
+
+        writeBytes(shortByteAr, swap);
+        return this;
+    }
+
+    public BinaryPacketStream writeUInt(long l, boolean swap) {
+        l = l & 0xFFFFFFFFL;
+        int i = (int) l;
+
+        byte[] intByteAr = new byte[]{
+                (byte) (i >>> 24),
+                (byte) (i >>> 16),
+                (byte) (i >>> 8),
+                (byte) (i)
+        };
+
+        writeBytes(intByteAr, swap);
+        return this;
+    }
+
+    public BinaryPacketStream writeBytes(byte[] bytes) {
+        writeBytes(bytes, this.swap);
+        return this;
+    }
+
+    public BinaryPacketStream writeBytes(byte[] bytes, boolean swap) {
+        if (swap)
+            bytes = byteArrayReverse(bytes);
+        reserve(count + bytes.length);
+
+        System.arraycopy(bytes, 0, this.buf, count, bytes.length);
+
+        this.count += bytes.length;
+        return this;
+    }
+
+    public BinaryPacketStream writeByte(byte b) {
+        reserve(count + 1);
+        buf[count++] = b;
+        return this;
     }
 
 
@@ -34,20 +117,19 @@ public class BinaryPacketStream {
             throw new BufferUnderflowException();
 
 
-
         return switch (buf[pointer] & 0xE0) {
             case 0xE0 -> {
                 readByte();
                 yield readUInt(true);
             }
             case 0xC0 -> readUInt(true) & 0x3FFFFFFF;
-            case 0x80, 0xA0 -> readUInt16(true) & 0x7FFF;
+            case 0x80, 0xA0 -> readUShort(true) & 0x7FFF;
             default -> readByte();
         };
     }
 
 
-    public int readUInt16(boolean swap) {
+    public int readUShort(boolean swap) {
         byte[] ar = readBytes(2, swap);
         int b1 = ar[0] & 0xFF;
         int b2 = ar[1] & 0xFF;
@@ -74,7 +156,7 @@ public class BinaryPacketStream {
     }
 
     public int readInt(boolean swap) {
-        return (int)readUInt(swap);
+        return (int) readUInt(swap);
     }
 
     public byte[] readBytes(int len) {
@@ -82,11 +164,12 @@ public class BinaryPacketStream {
     }
 
     public byte[] readBytes(long len) {
-        return readBytes((int)len, this.swap);
+        return readBytes((int) len, this.swap);
     }
+
     public byte[] readBytes(long len, boolean swap) {
 
-        return readBytes((int)len, swap);
+        return readBytes((int) len, swap);
     }
 
     public byte[] readBytes(int len, boolean swap) {
@@ -120,7 +203,8 @@ public class BinaryPacketStream {
     }
 
     public void skip(int length) {
-        pointer += length;
+        reserve(length);
+        this.pointer += length;
     }
 
     public boolean canRead(int length) {
@@ -131,8 +215,12 @@ public class BinaryPacketStream {
         this.buf = Arrays.copyOf(buf, buf.length * 2);
     }
 
-    public static void main(String[] args) {
+    private void reserve(int count) {
+        if (this.buf == null)
+            this.buf = new byte[10];
 
+        if (count > buf.length)
+            expand();
     }
 }
 
