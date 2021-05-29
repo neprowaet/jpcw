@@ -205,10 +205,13 @@ public class MPPC extends Security{
             v = (v | (((packedBytes.get(i) & 0xffffffffL) << (24 - i * 8))) & 0xffffffffL);
             v &= 0xffffffffL;
         }
-        
-        v <<= packedOffset;
-        v &= 0xffffffffL;
-        v >>>= (32 - bitCount) & 0xffffffffL;
+
+
+        //v <<= packedOffset & 0xffffffffL; java operations priority... ну а может ЛУЧШЕ 5 hrs of debugging ??
+        v = v << packedOffset;
+        v = v & 0xffffffffL;
+        v = v >>> (32 - bitCount);
+        v = v & 0xffffffffL;
 
         packedOffset += bitCount & 0xff;
         int freeBytes = (packedOffset & 0xff) / 8;
