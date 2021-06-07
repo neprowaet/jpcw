@@ -1,6 +1,7 @@
 package neprowaet.jpcw.io;
 
 import java.nio.BufferUnderflowException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class BinaryPacketBuffer {
@@ -42,6 +43,42 @@ public class BinaryPacketBuffer {
     public void swap() {
         this.swap = !this.swap;
     }
+
+    public String readString() {
+        byte[] bytes = readBytes(readCUint());
+
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    public String readUString() {
+        return readUString(this.swap);
+    }
+
+    public String readUString(boolean swap) {
+        byte[] bytes = readBytes(readCUint(), swap);
+
+
+        return new String(bytes, StandardCharsets.UTF_16LE);
+    }
+
+    public BinaryPacketBuffer writeString(String str) {
+        byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
+
+        writeCUInt(bytes.length);
+        writeBytes(bytes);
+
+        return this;
+    }
+
+    public BinaryPacketBuffer writeUString(String str) {
+        byte[] bytes = str.getBytes(StandardCharsets.UTF_16LE);
+
+        writeCUInt(bytes.length);
+        writeBytes(bytes);
+
+        return this;
+    }
+
 
     public BinaryPacketBuffer writeUInt(long l) {
         writeUInt(l, this.swap);

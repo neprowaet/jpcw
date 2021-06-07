@@ -71,14 +71,13 @@ public class PacketSerializator {
 
         }
 
-        switch (fieldType.getName()) {
+        switch (fieldType.getSimpleName()) {
             case "short" -> field.setShort(ret, (short) buf.readUByte());
             case "int" -> field.setInt(ret, buf.readInt(swap));
             case "long" -> field.setLong(ret, buf.readUInt(swap));
             case "byte" -> field.setByte(ret, buf.readByte());
-            case "boolean" -> {
-                field.setBoolean(ret, buf.readByte() != 0);
-            }
+            case "boolean" -> field.setBoolean(ret, buf.readByte() != 0);
+            case "String" -> field.set(ret, buf.readUString(swap));
         }
     }
 
@@ -143,7 +142,7 @@ public class PacketSerializator {
         if (field.isAnnotationPresent(Swap.class))
             buf.swap();
 
-        switch (fieldType.getName()) {
+        switch (fieldType.getSimpleName()) {
             case "short" -> buf.writeUShort((int) field.get(packet));
             case "int" -> buf.writeUInt((int) field.get(packet));
             case "long" -> buf.writeUInt((long) field.get(packet));
@@ -155,6 +154,7 @@ public class PacketSerializator {
                     buf.writeByte((byte) 0);
                 }
             }
+            case "String" -> buf.writeUString((String) field.get(packet));
             default -> System.out.println("WAI");
         }
 

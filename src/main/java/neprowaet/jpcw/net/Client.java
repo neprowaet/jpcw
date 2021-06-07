@@ -43,15 +43,6 @@ public class Client {
         }
 
         futurepackets.get(towait).add(toreturn);
-        //write(p);
-
-        return toreturn;
-    }
-
-    public <T extends Packet> FuturePacket<T> secondAttempt (Packet p, Class<T> towait) {
-        FuturePacket<T> toreturn = new FuturePacket<>();
-
-        addListener(towait, (packet) -> { toreturn.set(packet); listeners.get(towait).remove(listeners.get(towait).size()-1);});
         write(p);
 
         return toreturn;

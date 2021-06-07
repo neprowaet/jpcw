@@ -2,6 +2,7 @@ package neprowaet.jpcw.net.packet.server;
 
 import neprowaet.jpcw.data.ConnectionData;
 import neprowaet.jpcw.io.annotations.Array;
+import neprowaet.jpcw.io.annotations.Opcode;
 import neprowaet.jpcw.io.annotations.Skip;
 import neprowaet.jpcw.data.Handler;
 import neprowaet.jpcw.io.Packet;
@@ -9,6 +10,7 @@ import neprowaet.jpcw.net.packet.types.ServerPacket;
 
 import java.util.Arrays;
 
+@Opcode(0x01)
 public class Challenge extends Packet implements Handler<ConnectionData>, ServerPacket {
     @Array
     public byte[] nonce;

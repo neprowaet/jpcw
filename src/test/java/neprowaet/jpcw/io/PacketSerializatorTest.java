@@ -3,6 +3,7 @@ package neprowaet.jpcw.io;
 import neprowaet.jpcw.net.packet.client.Response;
 import neprowaet.jpcw.net.packet.server.Challenge;
 import neprowaet.jpcw.net.packet.server.KeyExchange;
+import neprowaet.jpcw.net.packet.server.WorldChat;
 import neprowaet.jpcw.net.security.HMACMD5HASH;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +23,7 @@ class PacketSerializatorTest {
         ch.exp_rate = 123123;
 
         BinaryPacketBuffer buf = PacketSerializator.serialize(ch, true);
+        buf.readCUint();buf.readCUint();
         System.out.println(byteArToHexString(buf.toByteArray()));
         System.out.println(ch);
 
@@ -38,21 +40,25 @@ class PacketSerializatorTest {
         System.out.println("060c15157b160c000105030005157d00f400000001e0f3 buf size:" + buf.buf.length);
 
         Challenge ch = PacketSerializator.deserialize(buf, Challenge.class, true);
-        System.out.println(byteArToHexString(ch.edition) + "<---");
+        System.out.println(byteArToHexString(ch.version) + "<---");
         System.out.println(ch.exp_rate + "<---");
 
         BinaryPacketBuffer buf2 = PacketSerializator.serialize(ch, true);
         System.out.println(byteArToHexString(buf2.toByteArray()));
 
+
+        buf2.readCUint();buf2.readCUint();
+        System.out.println(buf2.count);
+        System.out.println(buf2.pointer);
         Challenge ch2 = PacketSerializator.deserialize(buf2, Challenge.class, true);
-        System.out.println(byteArToHexString(ch2.edition));
+        System.out.println(byteArToHexString(ch2.version));
         System.out.println(ch2.exp_rate);
 
-        assertEquals(ch.edition, ch2.edition);
+        assertArrayEquals(ch.edition, ch2.edition);
         assertEquals(ch.exp_rate, ch2.exp_rate);
-        assertEquals(ch.nonce, ch2.nonce);
+        assertArrayEquals(ch.nonce, ch2.nonce);
         assertEquals(ch.algo, ch2.algo);
-        assertEquals(ch.version, ch2.version);
+        assertArrayEquals(ch.version, ch2.version);
 
     }
 
@@ -67,13 +73,21 @@ class PacketSerializatorTest {
     }
 
     @Test
-    void KeyExchangeDeserialization() throws Exception {
+    void keyExchangeDeserialization() throws Exception {
 
         byte[] bytes = hexStringToByteArray("1047ad3db27689b809a28c3606b41cb02400");
         KeyExchange des = PacketSerializator.deserialize(new BinaryPacketBuffer(bytes), KeyExchange.class , true);
 
         System.out.println(Arrays.toString(des.nonce));
-        assertEquals(des.nonce, hexStringToByteArray("47ad3db27689b809a28c3606b41cb024"));
+        assertArrayEquals(des.nonce, hexStringToByteArray("47ad3db27689b809a28c3606b41cb024"));
+    }
+
+    @Test
+    void stringProcessingTest() throws Exception {
+        //8085 809c 01 00 00081e50 0c 53006b00720069006c006c00 8086 1f04200418042104220420002000210420001f0415042704100422042c042e04200020001204200031003000300020001f0415042904150420042b0420001f041e04200015041604150400e03c0030003e003c0030003a00340033003e0001e03c0030003e003c0030003a00340033003e0002e03c0030003e003c0030003a00340033003e0000
+        byte[] bytes = hexStringToByteArray("010000081e500c53006b00720069006c006c0080861f04200418042104220420002000210420001f0415042704100422042c042e04200020001204200031003000300020001f0415042904150420042b0420001f041e04200015041604150400e03c0030003e003c0030003a00340033003e0001e03c0030003e003c0030003a00340033003e0002e03c0030003e003c0030003a00340033003e0000");
+        WorldChat msg = PacketSerializator.deserialize(new BinaryPacketBuffer(bytes), WorldChat.class, true);
+        System.out.println(msg.name + ": " + msg.msg);
     }
 
 
