@@ -1,6 +1,7 @@
 package neprowaet.jpcw.io;
 
 import neprowaet.jpcw.net.packet.client.KeepAlive;
+import neprowaet.jpcw.net.packet.client.PShopListItem;
 import neprowaet.jpcw.net.packet.client.SelectRole;
 import neprowaet.jpcw.net.packet.server.*;
 import neprowaet.jpcw.net.packet.types.ServerPacket;
@@ -18,6 +19,8 @@ public class PacketRegistry {
         register(0x04, new OnlineAnnounce());
         register(0x53, new RoleList_Re());
         register(0x47, new SelectRole_Re());
+        register(0x85, new WorldChat());
+        register(0x3A1, new PShopListItem_Re());
 
         register(0x5A, new KeepAlive());
     }

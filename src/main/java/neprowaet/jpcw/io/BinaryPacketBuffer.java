@@ -90,14 +90,14 @@ public class BinaryPacketBuffer {
             return writeByte((byte) l);
 
         if (l < 0x4000)
-            return writeUShort((int) (l | 0x8000), true);
+            return writeUShort((int) (l | 0x8000), false);
 
         if (l < 0x20000000)
-            return writeUInt(l | 0xC0000000, true);
+            return writeUInt(l | 0xC0000000, false);
 
         writeByte((byte) 0xE0);
 
-        return writeUInt(l, true);
+        return writeUInt(l, false);
     }
 
     public BinaryPacketBuffer writeUShort(int i) {

@@ -3,8 +3,8 @@ package neprowaet.jpcw.data.gametypes;
 import neprowaet.jpcw.io.BinaryPacketBuffer;
 
 public class PShopItem implements SerializableType {
-    GRoleInventory item;
-    long price;
+    public GRoleInventory item;
+    public long price;
     long reserved;
     long reserved2;
 

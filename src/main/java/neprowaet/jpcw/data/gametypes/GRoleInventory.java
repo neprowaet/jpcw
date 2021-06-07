@@ -3,16 +3,16 @@ package neprowaet.jpcw.data.gametypes;
 import neprowaet.jpcw.io.BinaryPacketBuffer;
 
 public class GRoleInventory implements SerializableType {
-    long id;
-    long pos;
-    long count;
-    long max_count;
-    byte[] data;
-    long proctype;
-    long expiredata;
-    long guid1;
-    long guid2;
-    long mask;
+    public long id;
+    public long pos;
+    public long count;
+    public long max_count;
+    public byte[] data;
+    public long proctype;
+    public long expiredata;
+    public long guid1;
+    public long guid2;
+    public long mask;
 
 
     @Override

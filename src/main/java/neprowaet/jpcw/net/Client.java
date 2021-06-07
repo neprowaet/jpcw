@@ -31,6 +31,7 @@ public class Client {
     public final HashMap<Class<? extends Packet>, List<PacketListener<? extends Packet>>> listeners = new HashMap<>();
     private final ConcurrentHashMap<Class<? extends Packet>, ConcurrentLinkedQueue<FuturePacket<? extends Packet>>> futurepackets = new ConcurrentHashMap<>();
     private boolean connected;
+    private volatile boolean authorized;
 
     ByteBuffer recvb = ByteBuffer.allocate(2 * 1024);
     BinaryPacketBuffer databuf = new BinaryPacketBuffer();
@@ -62,6 +63,7 @@ public class Client {
     public void connect() {
         try {
             channel.connect(connection.address);
+            connected = true;
         } catch (IOException e) {
             System.out.println("can't connect");
         }
@@ -129,24 +131,33 @@ public class Client {
     }
 
     public void enableAutoAuth() {
-        addListener(Challenge.class, p ->  write(new Response()));
+        addListener(Challenge.class, p ->  write(new Response(), true));
 
-        addListener(KeyExchange.class, p -> write(new KeyExchangeC2S()));
+        addListener(KeyExchange.class, p -> write(new KeyExchangeC2S(), true));
 
-        addListener(OnlineAnnounce.class, p -> write(new RoleList(-1)));
+        addListener(OnlineAnnounce.class, p -> write(new RoleList(-1), true));
 
         addListener(RoleList_Re.class, p -> {
             if(p.roleProvided) {
-                write(new RoleList(p.handle));
+                write(new RoleList(p.handle), true);
             } else {
-                write(new SelectRole(0));
+                write(new SelectRole(0), true);
             }
         });
 
-        addListener(SelectRole_Re.class, p -> write(new EnterWorld()));
+        addListener(SelectRole_Re.class, p -> { write(new EnterWorld() ,true); authorized = true; });
     }
 
     public void write(Packet p) {
+        write(p, false);
+    }
+
+    public void write(Packet p, boolean force) {
+
+        while(!force && !authorized)
+            Thread.onSpinWait();
+
+
         if (p instanceof Handler handler) handler.handle(this.data);
 
         BinaryPacketBuffer data = PacketSerializator.serialize(p, true);

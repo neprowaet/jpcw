@@ -1,5 +1,7 @@
 package neprowaet.jpcw.io;
 
+import neprowaet.jpcw.data.gametypes.PShopItemEntry;
+import neprowaet.jpcw.data.gametypes.SerializableType;
 import neprowaet.jpcw.io.annotations.*;
 import java.lang.reflect.Field;
 import java.nio.BufferUnderflowException;
@@ -66,10 +68,25 @@ public class PacketSerializator {
                 /*
                 ARRAY GAMETYPES PROCESSING
                  */
+
+                //SerializableType[] ar = new SerializableType[(int)length];
+
+                Object ar = java.lang.reflect.Array.newInstance(fieldType.getComponentType(), (int)length);
+
+                for (int i = 0; i < length; i++) {
+                    SerializableType element = (SerializableType)fieldType.getComponentType().getDeclaredConstructor().newInstance();
+                    element.deserialize(buf);
+                    java.lang.reflect.Array.set(ar, i, element);
+                }
+
+                field.set(ret, ar);
+
+
                 return;
             }
 
         }
+
 
         switch (fieldType.getSimpleName()) {
             case "short" -> field.setShort(ret, (short) buf.readUByte());
@@ -78,6 +95,17 @@ public class PacketSerializator {
             case "byte" -> field.setByte(ret, buf.readByte());
             case "boolean" -> field.setBoolean(ret, buf.readByte() != 0);
             case "String" -> field.set(ret, buf.readUString(swap));
+
+
+            default -> {
+                if (fieldType.getInterfaces().length != 0) {
+                    Object o = fieldType.getDeclaredConstructor().newInstance();
+                    if (o instanceof SerializableType gametype) {
+                        gametype.deserialize(buf);
+                        field.set(ret, gametype);
+                    } else throw new ClassNotFoundException("deserializator expected SerializableType");
+                }
+            }
         }
     }
 
