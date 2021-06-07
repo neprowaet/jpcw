@@ -18,6 +18,9 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Client {
 
@@ -25,11 +28,36 @@ public class Client {
     private Connection connection;
     protected SocketChannel channel;
 
-    private HashMap<Class<? extends Packet>, List<PacketListener<? extends Packet>>> listeners = new HashMap<>();
+    public final HashMap<Class<? extends Packet>, List<PacketListener<? extends Packet>>> listeners = new HashMap<>();
+    private final ConcurrentHashMap<Class<? extends Packet>, ConcurrentLinkedQueue<FuturePacket<? extends Packet>>> futurepackets = new ConcurrentHashMap<>();
     private boolean connected;
 
     ByteBuffer recvb = ByteBuffer.allocate(2 * 1024);
     BinaryPacketBuffer databuf = new BinaryPacketBuffer();
+
+    public <T extends Packet> FuturePacket<T> sendAndWaitFor (Packet p, Class<T> towait) {
+        FuturePacket<T> toreturn = new FuturePacket<>();
+
+        if (!futurepackets.containsKey(towait)) {
+            futurepackets.put(towait, new ConcurrentLinkedQueue<>());
+        }
+
+        futurepackets.get(towait).add(toreturn);
+        //write(p);
+
+        return toreturn;
+    }
+
+    public <T extends Packet> FuturePacket<T> secondAttempt (Packet p, Class<T> towait) {
+        FuturePacket<T> toreturn = new FuturePacket<>();
+
+        addListener(towait, (packet) -> { toreturn.set(packet); listeners.get(towait).remove(listeners.get(towait).size()-1);});
+        write(p);
+
+        return toreturn;
+    }
+
+
 
 
     protected Client(Connection connection) {
@@ -82,14 +110,29 @@ public class Client {
             if (databuf.remaining() < packetlen) { databuf.reset(); return; } // not enought data to read full packet
 
             if (!PacketRegistry.contains(opcode)) { databuf.skip(packetlen); databuf.compact(); return; } // skip data if packet unregistered
-            Packet p = (Packet) PacketSerializator.deserialize(databuf, PacketRegistry.get(opcode), true);
+            Class packetType = PacketRegistry.get(opcode);
+
+
+            Packet p = (Packet) PacketSerializator.deserialize(databuf, packetType, true);
 
             databuf.position(headerlen + packetlen);
             databuf.compact();
-            if (p instanceof Handler handler) handler.handle(this.data);
 
-            for (PacketListener packetListener : listeners.get(PacketRegistry.get(opcode)))
+
+            if (p instanceof Handler handler)
+                handler.handle(this.data);
+
+            if(listeners.get(packetType) != null)
+            for (PacketListener packetListener : listeners.get(packetType))
                 packetListener.onPacket(p);
+
+            if(futurepackets.containsKey(packetType)) {
+                FuturePacket<? extends Packet> futurepacket = futurepackets.get(packetType).poll();
+                if(futurepacket != null) {
+                    futurepacket.set(p);
+                }
+
+            }
 
         }
     }
@@ -144,7 +187,7 @@ public class Client {
 
     public <T extends Packet> void addListener(Class<T> packetType, PacketListener<T> packetListener) {
         if (!listeners.containsKey(packetType))
-            listeners.put(packetType, new ArrayList<>());
+            listeners.put(packetType, new CopyOnWriteArrayList<>());
         listeners.get(packetType).add(packetListener);
     }
 

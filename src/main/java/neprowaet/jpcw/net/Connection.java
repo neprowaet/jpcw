@@ -12,7 +12,6 @@ public class Connection {
     private Selector selector;
     public boolean work = true;
 
-
     public InetSocketAddress address;
 
     public Client newClient(String username, String password) {
@@ -24,7 +23,6 @@ public class Connection {
             socket.configureBlocking(false);
             SelectionKey selectionKey = socket.register(selector, SelectionKey.OP_CONNECT);
             selectionKey.attach(client);
-            //socket.connect(address);
 
             client.channel = socket;
             client.data.ConnectionData.username = username;
@@ -91,21 +89,6 @@ public class Connection {
 
                 it.remove();
             }
-
         }
-    }
-
-    public static void printByteArr(byte[] d) {
-        for (byte b : d) {
-            Integer ii = b & 0xff;
-            System.out.printf("%02x ", (b & 0xff));
-        }        //        ByteBuffer bb = ByteBuffer.allocate(1024 * 1);
-//        t1.read(bb);
-//        UnsignedBuffer b = new UnsignedBuffer(ar);
-//        System.out.println(b.readCUint());
-//        System.out.println(b.readCUint());
-//        printByteArr(bb.array());
-        System.out.println();
-
     }
 }
