@@ -12,7 +12,7 @@ public class Data {
         //this.client = client;
     }
 
-    public ConnectionInfo ConnectionInfo;
+    public ConnectionData ConnectionData;
     public AuthorizationData AuthorizationData;
 
 }

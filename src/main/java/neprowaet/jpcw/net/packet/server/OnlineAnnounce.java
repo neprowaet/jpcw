@@ -9,24 +9,18 @@ public class OnlineAnnounce extends Packet implements Handler<AuthorizationData>
 
     public long userid;
     public long localsid;
-    public long remain_time;
-    public byte zoneid;
-    public long free_time_left;
-    public long free_time_end;
-    public long creatime;
-    public byte passwd_flag;
-    public byte usbbind;
-    public byte accountinfo_flag;
 
     @Override
-    public void handleData(AuthorizationData dataBlock) {
-
+    public void handleData(AuthorizationData data) {
+        data.userid = this.userid;
+        data.localsid = this.localsid;
     }
 }
     /*
     	<protocol debug="0" name="OnlineAnnounce" maxsize="64" prior="101" type="4">
 		<variable name="userid" type="int" />
 		<variable name="localsid" type="unsigned int" />
+		========================================================================================
 		<variable name="remain_time" type="int" default="0"/>
 		<variable name="zoneid" type="char" default="0"/>
 		<variable name="free_time_left" type="int" default="0"/>

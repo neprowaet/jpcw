@@ -3,7 +3,7 @@ package neprowaet.jpcw.io;
 import java.nio.BufferUnderflowException;
 import java.util.Arrays;
 
-public class BinaryPacketStream {
+public class BinaryPacketBuffer {
 
     public byte[] buf = new byte[16];
 
@@ -12,15 +12,15 @@ public class BinaryPacketStream {
 
     private boolean swap = false;
 
-    public BinaryPacketStream() {
+    public BinaryPacketBuffer() {
     }
 
-    public BinaryPacketStream(byte[] ar) {
+    public BinaryPacketBuffer(byte[] ar) {
         this.buf = ar;
         this.count = ar.length;
     }
 
-    public BinaryPacketStream(byte[] ar, int len) {
+    public BinaryPacketBuffer(byte[] ar, int len) {
         this.buf = Arrays.copyOf(ar, len);
     }
 
@@ -39,12 +39,16 @@ public class BinaryPacketStream {
         this.swap = true;
     }
 
-    public BinaryPacketStream writeUInt(long l) {
+    public void swap() {
+        this.swap = !this.swap;
+    }
+
+    public BinaryPacketBuffer writeUInt(long l) {
         writeUInt(l, this.swap);
         return this;
     }
 
-    public BinaryPacketStream writeCUInt(long l) {
+    public BinaryPacketBuffer writeCUInt(long l) {
         if (l < 0x80)
             return writeByte((byte) l);
 
@@ -59,10 +63,11 @@ public class BinaryPacketStream {
         return writeUInt(l, true);
     }
 
-    public BinaryPacketStream writeUShort(int i) {
+    public BinaryPacketBuffer writeUShort(int i) {
         return writeUShort(i, this.swap);
     }
-    public BinaryPacketStream writeUShort(int i, boolean swap) {
+
+    public BinaryPacketBuffer writeUShort(int i, boolean swap) {
         i = i & 0xFFFF;
 
         byte[] shortByteAr = new byte[]{
@@ -74,7 +79,7 @@ public class BinaryPacketStream {
         return this;
     }
 
-    public BinaryPacketStream writeUInt(long l, boolean swap) {
+    public BinaryPacketBuffer writeUInt(long l, boolean swap) {
         l = l & 0xFFFFFFFFL;
         int i = (int) l;
 
@@ -89,26 +94,58 @@ public class BinaryPacketStream {
         return this;
     }
 
-    public BinaryPacketStream writeBytes(byte[] bytes) {
+    public BinaryPacketBuffer writeBytes(byte[] bytes) {
         writeBytes(bytes, this.swap);
         return this;
     }
 
-    public BinaryPacketStream writeBytes(byte[] bytes, boolean swap) {
+//    public BinaryPacketStream writeBytes(byte[] bytes, boolean swap) {
+//        if (swap)
+//            bytes = byteArrayReverse(bytes);
+//        reserve(count + bytes.length);
+//
+//        System.arraycopy(bytes, 0, this.buf, count, bytes.length);
+//
+//        this.count += bytes.length;
+//        return this;
+//    }
+
+    public BinaryPacketBuffer writeBytes(byte[] bytes, boolean swap) {
         if (swap)
             bytes = byteArrayReverse(bytes);
-        reserve(count + bytes.length);
 
-        System.arraycopy(bytes, 0, this.buf, count, bytes.length);
+        for (byte b : bytes)
+            writeByte(b);
 
-        this.count += bytes.length;
         return this;
     }
 
-    public BinaryPacketStream writeByte(byte b) {
+    public BinaryPacketBuffer writeByte(byte b) {
         reserve(count + 1);
         buf[count++] = b;
         return this;
+    }
+
+    public boolean tryReadCUint() {
+        if (!canRead(1))
+            return false;
+
+        switch (buf[pointer] & 0xE0) {
+            case 0xE0 -> {
+                if (!canRead(5)) return false;
+            }
+            case 0xC0 -> {
+                if (!canRead(4)) return false;
+            }
+            case 0x80, 0xA0 -> {
+                if (!canRead(2)) return false;
+            }
+            default -> {
+                return true;
+            }
+        }
+
+        return true;
     }
 
 
@@ -173,8 +210,8 @@ public class BinaryPacketStream {
     }
 
     public byte[] readBytes(int len, boolean swap) {
-//        if (!canRead(len))
-//            throw new BufferUnderflowException();
+        if (!canRead(len))
+            throw new BufferUnderflowException();
 
         byte[] ret = new byte[len];
         for (int i = 0; i < len; i++) {
@@ -208,7 +245,7 @@ public class BinaryPacketStream {
     }
 
     public boolean canRead(int length) {
-        return pointer + length < buf.length;
+        return pointer + length <= count;
     }
 
     private void expand() {
@@ -219,8 +256,49 @@ public class BinaryPacketStream {
         if (this.buf == null)
             this.buf = new byte[10];
 
-        if (count > buf.length)
+        while (count >= buf.length)
             expand();
+    }
+
+    public void reset() {
+        this.pointer = 0;
+    }
+
+    public int size() {
+        return this.count;
+    }
+
+    public int remaining() {
+        return this.count - this.pointer;
+    }
+
+    public void compact() {
+        byte[] temp = new byte[size()];
+        //this.count = size();
+        //byte[] hz = Arrays.copyOf(this.buf, size());
+        System.arraycopy(this.buf, pointer, temp, 0, remaining());
+
+        this.buf = temp;
+        this.count = remaining();
+        this.pointer = 0;
+    }
+
+    public void position(int pos) {
+        this.pointer = pos;
+    }
+
+    @Override
+    public String toString() {
+        return "BinaryPacketStream{" +
+                "buf=" + byteArToHexString(buf) +
+                '}';
+    }
+
+    public static String byteArToHexString(byte[] ar) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : ar)
+            sb.append(String.format("%02x", b & 0xff));
+        return sb.toString();
     }
 }
 

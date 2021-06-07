@@ -3,13 +3,11 @@ package neprowaet.jpcw.io;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class BinaryPacketStreamTest {
+class BinaryPacketBufferTest {
 
-    BinaryPacketStream buf;
+    BinaryPacketBuffer buf;
 
     @Test
     public void writeTest() {
@@ -17,7 +15,7 @@ class BinaryPacketStreamTest {
         //01 36 10 310000d000000000893b563fdeab30e3 00010502 00 1a 3330303030303766373935353366363436353535336636343635 00 cb6b2759
         String dump = "013610310000d000000000893b563fdeab30e300010502001a333030303030376637393535336636343635353533663634363500cb6b2759";
 
-        buf = new BinaryPacketStream();
+        buf = new BinaryPacketBuffer();
         buf.setBigEndian();
         buf.writeCUInt(1);
         buf.writeCUInt(54);

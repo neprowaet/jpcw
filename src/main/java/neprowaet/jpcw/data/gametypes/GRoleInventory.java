@@ -1,6 +1,6 @@
 package neprowaet.jpcw.data.gametypes;
 
-import neprowaet.jpcw.io.BinaryPacketStream;
+import neprowaet.jpcw.io.BinaryPacketBuffer;
 
 public class GRoleInventory implements SerializableType {
     long id;
@@ -16,7 +16,7 @@ public class GRoleInventory implements SerializableType {
 
 
     @Override
-    public void deserialize(BinaryPacketStream stream) {
+    public void deserialize(BinaryPacketBuffer stream) {
         this.id = stream.readUInt();
         this.pos = stream.readUInt();
         this.count = stream.readUInt();

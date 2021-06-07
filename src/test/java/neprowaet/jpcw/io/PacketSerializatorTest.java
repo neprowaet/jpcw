@@ -1,9 +1,12 @@
 package neprowaet.jpcw.io;
 
+import neprowaet.jpcw.net.packet.client.Response;
 import neprowaet.jpcw.net.packet.server.Challenge;
+import neprowaet.jpcw.net.packet.server.KeyExchange;
+import neprowaet.jpcw.net.security.HMACMD5HASH;
 import org.junit.jupiter.api.Test;
 
-import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,7 +21,7 @@ class PacketSerializatorTest {
         ch.edition = new byte[] {21, 125, 0, -12, 0};
         ch.exp_rate = 123123;
 
-        BinaryPacketStream buf = PacketSerializator.serialize(ch, true);
+        BinaryPacketBuffer buf = PacketSerializator.serialize(ch, true);
         System.out.println(byteArToHexString(buf.toByteArray()));
         System.out.println(ch);
 
@@ -30,7 +33,7 @@ class PacketSerializatorTest {
     void serialization() throws  Exception {
         //byte[] dump = hexStringToByteArray("10310000d000000000893b563fdeab30e300010502001a333030303030376637393535336636343635353533663634363500cb6b2759");
         byte[] dump = hexStringToByteArray("060c15157b160c000105030005157d00f400000001e0f3");
-        BinaryPacketStream buf = new BinaryPacketStream(dump);
+        BinaryPacketBuffer buf = new BinaryPacketBuffer(dump);
 
         System.out.println("060c15157b160c000105030005157d00f400000001e0f3 buf size:" + buf.buf.length);
 
@@ -38,13 +41,39 @@ class PacketSerializatorTest {
         System.out.println(byteArToHexString(ch.edition) + "<---");
         System.out.println(ch.exp_rate + "<---");
 
-        BinaryPacketStream buf2 = PacketSerializator.serialize(ch, true);
+        BinaryPacketBuffer buf2 = PacketSerializator.serialize(ch, true);
         System.out.println(byteArToHexString(buf2.toByteArray()));
 
         Challenge ch2 = PacketSerializator.deserialize(buf2, Challenge.class, true);
         System.out.println(byteArToHexString(ch2.edition));
         System.out.println(ch2.exp_rate);
 
+        assertEquals(ch.edition, ch2.edition);
+        assertEquals(ch.exp_rate, ch2.exp_rate);
+        assertEquals(ch.nonce, ch2.nonce);
+        assertEquals(ch.algo, ch2.algo);
+        assertEquals(ch.version, ch2.version);
+
+    }
+
+    @Test
+    void responseSerialization() {
+
+        byte[] hash = HMACMD5HASH.getHash("asdounng", "U59cf5b52cd5", new byte[]{ 5, 0, 5, 1});
+        Response auth = new Response("asdounng", hash, (byte) 0, new byte[] { 5, 0, 5, 1 });
+        BinaryPacketBuffer st = PacketSerializator.serialize(auth, true);
+        System.out.println(auth);
+        System.out.println(byteArToHexString(st.toByteArray()));
+    }
+
+    @Test
+    void KeyExchangeDeserialization() throws Exception {
+
+        byte[] bytes = hexStringToByteArray("1047ad3db27689b809a28c3606b41cb02400");
+        KeyExchange des = PacketSerializator.deserialize(new BinaryPacketBuffer(bytes), KeyExchange.class , true);
+
+        System.out.println(Arrays.toString(des.nonce));
+        assertEquals(des.nonce, hexStringToByteArray("47ad3db27689b809a28c3606b41cb024"));
     }
 
 

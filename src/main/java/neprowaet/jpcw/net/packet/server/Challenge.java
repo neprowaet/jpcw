@@ -1,7 +1,6 @@
 package neprowaet.jpcw.net.packet.server;
 
-import neprowaet.jpcw.data.ConnectionInfo;
-import neprowaet.jpcw.data.Data;
+import neprowaet.jpcw.data.ConnectionData;
 import neprowaet.jpcw.io.annotations.Array;
 import neprowaet.jpcw.io.annotations.Skip;
 import neprowaet.jpcw.data.Handler;
@@ -10,7 +9,7 @@ import neprowaet.jpcw.net.packet.types.ServerPacket;
 
 import java.util.Arrays;
 
-public class Challenge extends Packet implements Handler<ConnectionInfo>, ServerPacket {
+public class Challenge extends Packet implements Handler<ConnectionData>, ServerPacket {
     @Array
     public byte[] nonce;
 
@@ -26,8 +25,8 @@ public class Challenge extends Packet implements Handler<ConnectionInfo>, Server
     public long exp_rate;
 
     @Override
-    public void handleData(ConnectionInfo connectionInfo) {
-        connectionInfo.value = 1;
+    public void handleData(ConnectionData connectionData) {
+        connectionData.serverkey = nonce;
     }
 
     @Override

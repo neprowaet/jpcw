@@ -1,7 +1,7 @@
 package neprowaet.jpcw.net.security;
 
 public class RC4 extends Security{
-    private byte table[] = new byte[256];
+    private byte[] table = new byte[256];
     private int x;
     private int y;
 
@@ -50,12 +50,5 @@ public class RC4 extends Security{
 
         int xorIndex = ((table[x] & 0xff) + (table[y] & 0xff)) & 0xff;
         return new Byte[] { (byte) (b ^ table[xorIndex]) };
-    }
-
-    public static void main(String[] args) {
-        int i = 0xfe;
-        System.out.println(i);
-        byte b = (byte) i;
-        System.out.println((b & 0xff));
     }
 }

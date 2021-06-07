@@ -1,6 +1,6 @@
 package neprowaet.jpcw.data.gametypes;
 
-import neprowaet.jpcw.io.BinaryPacketStream;
+import neprowaet.jpcw.io.BinaryPacketBuffer;
 
 public class PShopItem implements SerializableType {
     GRoleInventory item;
@@ -10,7 +10,7 @@ public class PShopItem implements SerializableType {
 
 
     @Override
-    public void deserialize(BinaryPacketStream stream) {
+    public void deserialize(BinaryPacketBuffer stream) {
         this.item = new GRoleInventory();
         this.item.deserialize(stream);
         this.price = stream.readUInt();

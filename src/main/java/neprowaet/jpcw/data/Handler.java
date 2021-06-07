@@ -1,21 +1,25 @@
 package neprowaet.jpcw.data;
 
-import neprowaet.jpcw.data.ConnectionInfo;
-import neprowaet.jpcw.data.Data;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public interface Handler<T extends Data> {
 
-    void handleData(T dataBlock);
+    void handleData(T data);
 
     // автовайринг дома:
-    default void handle(Data data) throws InvocationTargetException, IllegalAccessException, NoSuchFieldException {
-        Method handler = this.getClass().getDeclaredMethods()[0];
-        Class<?> dataBlock = handler.getParameterTypes()[0];
-        Object o = data.getClass().getField(dataBlock.getSimpleName()).get(data);
-        handler.invoke(this, o);
+    default void handle(Data data) {
+        try {
+            for (Method m : this.getClass().getDeclaredMethods()) {
+                if (!m.getName().equals("handleData")) continue;
+                if (m.getParameterTypes()[0].getSimpleName().equals("Data")) continue;
+                Class<?> dataBlock = m.getParameterTypes()[0];
+                Object o = data.getClass().getField(dataBlock.getSimpleName()).get(data);
+                m.invoke(this, o);
+
+            }
+        } catch (Exception e) {
+            System.err.println("Handling data error: " + this.getClass().getName());
+        }
     }
+
 }
