@@ -13,4 +13,5 @@ public class ConnectionData extends Data {
     public byte[] oseckey;
 
     public boolean encryption;
+
 }

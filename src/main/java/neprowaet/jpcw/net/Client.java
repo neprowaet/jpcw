@@ -11,6 +11,7 @@ import neprowaet.jpcw.io.PacketSerializator;
 import neprowaet.jpcw.net.packet.client.*;
 import neprowaet.jpcw.net.packet.server.*;
 import neprowaet.jpcw.net.security.MPPC;
+import neprowaet.jpcw.net.security.Security;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,24 +34,11 @@ public class Client {
     private boolean connected;
     private volatile boolean authorized;
 
-    ByteBuffer recvb = ByteBuffer.allocate(2 * 1024);
+    ByteBuffer recvb = ByteBuffer.allocate(2 * 24);
     BinaryPacketBuffer databuf = new BinaryPacketBuffer();
 
-    public <T extends Packet> FuturePacket<T> sendAndWaitFor (Packet p, Class<T> towait) {
-        FuturePacket<T> toreturn = new FuturePacket<>();
-
-        if (!futurepackets.containsKey(towait)) {
-            futurepackets.put(towait, new ConcurrentLinkedQueue<>());
-        }
-
-        futurepackets.get(towait).add(toreturn);
-        write(p);
-
-        return toreturn;
+    private Client() {
     }
-
-
-
 
     protected Client(Connection connection) {
         this.connection = connection;
@@ -69,12 +57,27 @@ public class Client {
         }
     }
 
-    MPPC mppc = new MPPC();
-
-    private Client() {
+    public void disconnect() {
+        try {
+            channel.close();
+            connected = false;
+            System.out.println(data.ConnectionData.username + " disconnected");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    private List<Security> encodingChain = new ArrayList<>();
+    private List<Security> decodingChain = new ArrayList<>();
+
+    public void addEncoder(Security s) {
+        encodingChain.add(s);
+    }
+
+    public void addDecoder(Security s) {
+        decodingChain.add(s);
+    }
+
     public void read(SocketChannel socket) throws Exception {
         int readedLength = socket.read(recvb);
         if (readedLength == -1) { socket.close();
@@ -86,11 +89,12 @@ public class Client {
         recvb.get(temp);
         recvb.compact();
 
-        if(data.ConnectionData.encryption)
-            temp = mppc.unpack(temp);
+        if (data.ConnectionData.encryption)
+            for (Security s : decodingChain)
+                temp = s.unpack(temp);
 
         databuf.writeBytes(temp);
-        System.out.println("[S->C] len: " + readedLength + " data: " + byteArToHexString(databuf.toByteArray()));
+        //System.out.println("[S->C] len: " + readedLength + " data: " + byteArToHexString(databuf.toByteArray()));
         while (true) {
             int opcode, packetlen;
             if (!databuf.tryReadCUint()) { databuf.reset(); return; } // buffer doesn't filled enought to read opcode
@@ -103,10 +107,9 @@ public class Client {
             if (databuf.remaining() < packetlen) { databuf.reset(); return; } // not enought data to read full packet
 
             if (!PacketRegistry.contains(opcode)) { databuf.skip(packetlen); databuf.compact(); return; } // skip data if packet unregistered
-            Class packetType = PacketRegistry.get(opcode);
 
 
-            Packet p = (Packet) PacketSerializator.deserialize(databuf, packetType, true);
+            Packet p = (Packet) PacketSerializator.deserialize(databuf, PacketRegistry.get(opcode), true);
 
             databuf.position(headerlen + packetlen);
             databuf.compact();
@@ -115,18 +118,27 @@ public class Client {
             if (p instanceof Handler handler)
                 handler.handle(this.data);
 
-            if(listeners.get(packetType) != null)
-            for (PacketListener packetListener : listeners.get(packetType))
+            notifyListeners(opcode, p);
+            notifyFuturePackets(opcode, p);
+        }
+    }
+
+    private void notifyListeners(int opcode, Packet p) {
+        Class packetType = PacketRegistry.get(opcode);
+        if(listeners.get(packetType) != null) {
+            for (PacketListener packetListener : listeners.get(packetType)) {
                 packetListener.onPacket(p);
-
-            if(futurepackets.containsKey(packetType)) {
-                FuturePacket<? extends Packet> futurepacket = futurepackets.get(packetType).poll();
-                if(futurepacket != null) {
-                    futurepacket.set(p);
-                }
-
             }
+        }
+    }
 
+    private void notifyFuturePackets(int opcode, Packet p) {
+        Class packetType = PacketRegistry.get(opcode);
+        if(futurepackets.containsKey(packetType)) {
+            FuturePacket<? extends Packet> futurepacket = futurepackets.get(packetType).poll();
+            if(futurepacket != null) {
+                futurepacket.set(p);
+            }
         }
     }
 
@@ -145,7 +157,10 @@ public class Client {
             }
         });
 
-        addListener(SelectRole_Re.class, p -> { write(new EnterWorld() ,true); authorized = true; });
+        addListener(SelectRole_Re.class, p -> {
+            write(new EnterWorld() ,true);
+            authorized = true;
+            System.out.println(data.ConnectionData.username + " entered world");});
     }
 
     public void write(Packet p) {
@@ -157,12 +172,18 @@ public class Client {
         while(!force && !authorized)
             Thread.onSpinWait();
 
-
         if (p instanceof Handler handler) handler.handle(this.data);
 
-        BinaryPacketBuffer data = PacketSerializator.serialize(p, true);
-        System.out.println("[C->S] len: " + data.size() + " data: " + byteArToHexString(data.toByteArray()));
-        ByteBuffer b = ByteBuffer.wrap(data.toByteArray());
+        BinaryPacketBuffer buffer = PacketSerializator.serialize(p, true);
+        //System.out.println("[C->S] len: " + data.size() + " data: " + byteArToHexString(data.toByteArray()));
+
+        byte[] temp = buffer.toByteArray();
+
+        if (this.data.ConnectionData.encryption)
+            for (Security s : encodingChain)
+                temp = s.unpack(temp);
+
+        ByteBuffer b = ByteBuffer.wrap(temp);
         try {
             while (b.hasRemaining())
                 channel.write(b);
@@ -170,7 +191,19 @@ public class Client {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
 
+    public <T extends Packet> FuturePacket<T> sendAndWaitFor (Packet p, Class<T> towait) {
+        FuturePacket<T> toreturn = new FuturePacket<>();
+
+        if (!futurepackets.containsKey(towait)) {
+            futurepackets.put(towait, new ConcurrentLinkedQueue<>());
+        }
+
+        futurepackets.get(towait).add(toreturn);
+        write(p);
+
+        return toreturn;
     }
 
     public void writeRaw(byte[] bytes) {
@@ -184,19 +217,9 @@ public class Client {
         }
     }
 
-
-
-
     public <T extends Packet> void addListener(Class<T> packetType, PacketListener<T> packetListener) {
         if (!listeners.containsKey(packetType))
             listeners.put(packetType, new CopyOnWriteArrayList<>());
         listeners.get(packetType).add(packetListener);
-    }
-
-    public static String byteArToHexString(byte[] ar) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : ar)
-            sb.append(String.format("%02x", b & 0xff));
-        return sb.toString();
     }
 }

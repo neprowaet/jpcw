@@ -39,8 +39,4 @@ public class PacketRegistry {
     public static boolean contains(int opcode) {
         return serverPackets.containsKey(opcode);
     }
-
-    public static void main(String[] args) {
-
-    }
 }

@@ -19,6 +19,7 @@ public class PacketSerializator {
     public static <T> T deserialize(BinaryPacketBuffer buf, Class<T> type, boolean swap) throws Exception {
 
         T t = type.getConstructor().newInstance();
+
         try {
             for (Field field : type.getFields()) {
                 readField(buf, field, swap, t);
@@ -26,7 +27,6 @@ public class PacketSerializator {
         } catch (BufferUnderflowException e) {
             e.printStackTrace();
         }
-
         return t;
     }
 
@@ -40,10 +40,6 @@ public class PacketSerializator {
 
         if (field.isAnnotationPresent(If.class))
             if (!ret.getClass().getField(field.getAnnotation(If.class).value()).getBoolean(ret)) return;
-
-        /*
-        GAMETYPES PROCESSING
-        */
 
         if (fieldType.isArray()) {
             Array arrayAnno = field.getAnnotation(Array.class);
@@ -69,8 +65,6 @@ public class PacketSerializator {
                 ARRAY GAMETYPES PROCESSING
                  */
 
-                //SerializableType[] ar = new SerializableType[(int)length];
-
                 Object ar = java.lang.reflect.Array.newInstance(fieldType.getComponentType(), (int)length);
 
                 for (int i = 0; i < length; i++) {
@@ -81,12 +75,9 @@ public class PacketSerializator {
 
                 field.set(ret, ar);
 
-
                 return;
             }
-
         }
-
 
         switch (fieldType.getSimpleName()) {
             case "short" -> field.setShort(ret, (short) buf.readUByte());
@@ -95,7 +86,6 @@ public class PacketSerializator {
             case "byte" -> field.setByte(ret, buf.readByte());
             case "boolean" -> field.setBoolean(ret, buf.readByte() != 0);
             case "String" -> field.set(ret, buf.readUString(swap));
-
 
             default -> {
                 if (fieldType.getInterfaces().length != 0) {
@@ -188,6 +178,5 @@ public class PacketSerializator {
 
         if (field.isAnnotationPresent(Swap.class))
             buf.swap();
-
     }
 }
